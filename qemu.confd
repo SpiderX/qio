@@ -1,0 +1,89 @@
+# Copyright 1999-2017 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+## QEMU
+# QEMU architecture to use
+ARCH="x86_64"
+# Enable KVM full virtualization support
+KVM=yes
+# Daemonize the QEMU process after initialization
+DAEMON=yes
+# Prevent QEMU from loading configuration files from 'sysconfdir' and 'datadir'
+NODEFAULTS=yes
+
+## VM General
+# Name of the guest
+NAME=""
+# Type of VGA card to emulate (cirrus|std|vmware|qxl|tcx|cg3|virtio|none)
+VGA=""
+# VNC display QEMU listen on
+DISPLAY=":1"
+# Keyboard layout language
+LANGUAGE="en-us"
+# Define a NUMA node
+NUMA=0
+# Assign RAM to NUMA node
+NUMAMEM="ram-node0"
+# Select CPU model (qemu-system-$ARCH -cpu help)
+CPU=""
+
+## VM Resource
+# Allocate guest startup RAM size (qemu-system-$ARCH -m help)
+RAM=
+# Allocate VCPU
+SMP=( 1 )
+# Specifies the maximum number of hotpluggable CPUs
+SMPMAX=( 1 )
+# Set id to uniquely identify this NIC in other command line directives
+NET=( net0 )
+# Set NIC type
+NETTYPE=( tap )
+# Set NIC parameters
+NETPARAM=( ,ifname=tap101i0,script=no,vhost=on )
+# Set id to uniquely identify this fsdev in other command line directives
+FS=( fsdev0 fsdev1 fsdev2 )
+# Set fs driver backend to use (local|handle|proxy)
+FSDRIVER=( local local local )
+# Set the export path for the file system device. Files under this path will be available to the 9p client on the guest.
+FSPATH=( /usr/portage /usr/distfiles /usr/local/portage/nest )
+# Set the security model to be used for this export path (passthrough|mapped-xattr|mapped-file|none)
+FSMODEL=( passthrough passthrough passthrough )
+# Set id to uniquely identify this drive in other command line directives
+DRIVE=( drive-virtio0 drive-ide1 )
+# Set type on interface the drive is connected (ide|scsi|sd|mtd|floppy|pflash|virtio|none)
+DRIVEIF=( none none )
+# Set drive parameters
+DRIVEPARAM=( ,file=/dev/vg/vm-101-1,format=raw,cache=none,aio=native,detect-zeroes=on ,media=cdrom,aio=native )
+# Set object type (memory-backend-ram|random|rng-egd|tls-creds-anon|tls-creds-x509|filter-(buffer|mirror|redirector|rewriter|dump)|colo-compare|cryptodev-backend-builtin|secret)
+OBJECTTYPE=( memory-backend-ram )
+# Set object id and parameters
+OBJECT=( "${NUMAMEM}",size="${RAM}" )
+# Set id to uniquely identify this device in other command line directives
+DEVICE=( pci.2 pci.1 uhci balloon0 ide1 qga0 port0 virtio0 net0 fsdev0 fsdev1 fsdev2 )
+# Set device driver (qemu-system-$ARCH -device help
+DEVICEDRIVER=( pci-bridge pci-bridge piix3-usb-uhci virtio-balloon-pci ide-cd virtio-serial \
+virtserialport virtio-blk-pci virtio-net-pci virtio-9p-pci virtio-9p-pci virtio-9p-pci )
+# Set device driver bus
+DEVICEBUS=( pci.0 pci.0 pci.0 pci.0 ide.0 pci.0 qga0.0 pci.0 pci.0 pci.0 pci.0 pci.0 )
+# Set device address for PCI (addr), unit where is connected the IDE drive (unit), character device id for character device
+DEVICEADDR=( addr=0x1f addr=0x1e addr=0x1.0x2 addr=0x3 unit=1 addr=0x8 chardev=qga0 addr=0xa addr=0x12 addr=0x4 addr=0x5 addr=0x6 )
+# Driver parameters (qemu-system-$ARCH -device <driver>,help)
+DEVICEPARAM=( ,chassis_nr=2 ,chassis_nr=1 '' '' ,drive=drive-ide1,bootindex=200 '' ,name=org.qemu.guest_agent.0 \
+,drive=drive-virtio0,bootindex=100 ,netdev=net0,mac=E2:7C:42:5C:90:F3,bootindex=300 \
+,fsdev=fsdev0,mount_tag=portage ,fsdev=fsdev1,mount_tag=distfiles ,fsdev=fsdev2,mount_tag=nest )
+# Set id to uniquely identify this character device in other command line directives
+CHARDEV=( qmp qga0 )
+# Set character device backend (qemu-system-$ARCH -chardev help)
+CHARDEVBACKEND=( socket socket )
+# Set character device backend parameters
+CHARDEVPARAM=( ,path=/run/qemu/101.qmp,server,nowait ,path=/run/qemu/101.qga,server,nowait )
+
+# A time in seconds to wait for system graceful shutdown
+TIMEOUT=20
+# Show all guest parameters passed to QEMU
+VERBOSE=no
+# Additional parameters to pass to QEMU
+OPTS=""
+
+# Specify service dependencies.
+# rc_need=""

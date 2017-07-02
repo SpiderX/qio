@@ -1,0 +1,119 @@
+#!/sbin/openrc-run
+# Copyright 1999-2017 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+ID=${SVCNAME#*.}
+pidfile="/run/qemu/${ID}.pid"
+
+case "${SVCNAME%.*}" in
+	kvm)
+		command=$(which "qemu-system-${ARCH}")
+		[ -z "$command" ] && eerror "Failed to find the binary for qemu-system-${ARCH}"
+		;;
+	qemu)
+		command=$(which "qemu-${ARCH}")
+		[ -z "$command" ] && eerror "Failed to find the binary for qemu-${ARCH}"
+		;;
+	*)
+		eerror "Failed to find the binary for ${SVCNAME%.*}"
+		;;
+esac
+
+command_args="-mon chardev=qmp,mode=control \
+		-pidfile ${pidfile} \
+		-name ${NAME:-test} \
+		-boot menu=on,strict=on,reboot-timeout=1000 \
+		-vga ${VGA:-qxl} \
+		-vnc ${DISPLAY:-:1} \
+		-cpu ${CPU:-host} \
+		-m ${RAM:-512M} \
+		-numa node,nodeid=${NUMA},memdev=${NUMAMEM} \
+		-k ${LANGUAGE:-en-us} ${OPTS}"
+name="${command##*/} for ${ID} (${NAME})"
+start_stop_daemon_args="--verbose"
+description="Start the system"
+extra_commands="reboot"
+description_reboot="Reboot the system"
+extra_started_commands="console query reset resume status suspend"
+description_console="Access QEMU console"
+description_query="Query supported commands"
+description_reset="Reset the system"
+description_resume="Resume suspended system"
+description_suspend="Suspend running system"
+description_status="Show system status"
+
+start_pre() {
+	if yesno ${KVM}; then command_args="${command_args} -enable-kvm"; fi
+	if yesno ${DAEMON}; then command_args="${command_args} -daemonize"; fi
+	if yesno ${NODEFAULTS}; then command_args="${command_args} -nodefaults"; fi
+
+	for idx in "${!CHARDEV[@]}"; do command_args="${command_args} -chardev ${CHARDEVBACKEND[$idx]},id=${CHARDEV[$idx]}${CHARDEVPARAM[$idx]} "; done
+	for idx in "${!OBJECT[@]}" ; do command_args="${command_args} -object ${OBJECTTYPE[$idx]},id=${OBJECT[$idx]} "; done
+	for idx in "${!DEVICE[@]}" ; do command_args="${command_args} -device ${DEVICEDRIVER[$idx]},id=${DEVICE[$idx]},bus=${DEVICEBUS[$idx]},${DEVICEADDR[$idx]}${DEVICEPARAM[$idx]} "; done
+	for idx in "${!SMP[@]}"    ; do command_args="${command_args} -smp sockets=$(expr ${idx} + 1),cores=${SMP[$idx]} "; done
+	for idx in "${!DRIVE[@]}"  ; do command_args="${command_args} -drive if=${DRIVEIF[$idx]},id=${DRIVE[$idx]}${DRIVEPARAM[$idx]} "; done
+	for idx in "${!NET[@]}"    ; do command_args="${command_args} -netdev type=${NETTYPE[$idx]},id=${NET[$idx]}${NETPARAM[$idx]} "; done
+	for idx in "${!FS[@]}"     ; do command_args="${command_args} -fsdev ${FSDRIVER[$idx]},id=${FS[$idx]},path=${FSPATH[$idx]},security_model=${FSMODEL[$idx]} "; done
+
+	if yesno ${VERBOSE} ; then einfo "Command: $command $(printf '%s ' $command_args)" ; fi
+}
+
+depend() {
+	if [ "$SVCNAME" = 'qemu' ] || [ "$SVCNAME" = 'kvm' ] ; then eerror "Create a symlink for the VM you want to run"; return 0; fi
+}
+
+console() {
+	ebegin "Accessing console of ${ID} (${NAME}):"
+	socat unix-connect:/run/qemu/${ID}.qmp readline
+	eend $?
+}
+
+query() {
+	ebegin "Querring ${ID} (${NAME}) for supported commands"
+	echo '{ "execute": "qmp_capabilities" }{"execute":"query-commands"}' | socat - unix-connect:/run/qemu/${ID}.qmp
+	eend $?
+}
+
+reset() {
+	ebegin "Resetting ${ID} (${NAME})"
+	echo '{ "execute": "qmp_capabilities" }{"execute":"system_reset"}' | socat - unix-connect:/run/qemu/${ID}.qmp 1>/dev/null
+	eend $?
+}
+
+resume() {
+	ebegin "Resuming ${ID} (${NAME})"
+	echo '{ "execute": "qmp_capabilities" }{"execute":"cont"}' | socat - unix-connect:/run/qemu/${ID}.qmp 1>/dev/null
+	eend $?
+}
+
+reboot() {
+	ebegin "Rebooting ${ID} (${NAME})"
+	#send-keys
+	eend $?
+}
+
+status() {
+	ebegin "Status of ${ID} (${NAME}):"
+	echo '{ "execute": "qmp_capabilities" }{ "execute": "query-status" }' | socat - unix-connect:/run/qemu/${ID}.qmp
+	eend $?
+}
+
+suspend() {
+	ebegin "Suspending ${ID} (${NAME})"
+	echo '{ "execute": "qmp_capabilities" }{"execute":"stop"}' | socat - unix-connect:/run/qemu/${ID}.qmp 1>/dev/null
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping ${command##*/} for ${ID} (${NAME})"
+	echo '{ "execute": "qmp_capabilities" }{"execute":"system_powerdown"}' | socat - unix-connect:/run/qemu/${ID}.qmp 1>/dev/null
+	printf "   Waiting $TIMEOUT seconds for shutdown "
+	while kill -0 $(cat ${pidfile}) 2>/dev/null && [ -e ${pidfile} ] && [ ${TIMEOUT} -gt 0 ] ; do sleep 1; printf '.'; TIMEOUT=$(( TIMEOUT - 1 )); done
+	printf '\n'
+
+	if [ ${TIMEOUT} -eq 0 ] ; then
+		ewarn "Failed to shutdown ${ID} (${NAME}) gracefully using ACPI, stopping it with force"
+		start-stop-daemon --stop --quiet --exec ${command} --pidfile ${pidfile} --retry SIGKILL/5
+	fi
+	eend $?
+}
