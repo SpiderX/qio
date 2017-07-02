@@ -1,0 +1,2 @@
+# qio
+QEMU Init OpenRC
