@@ -3,6 +3,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 ID=${SVCNAME#*.}
+ARCH=${ARCH:-x86_64}
 pidfile="/run/qemu/${ID}.pid"
 
 case "${SVCNAME%.*}" in
