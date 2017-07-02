@@ -31,7 +31,7 @@ command_args="-mon chardev=qmp,mode=control \
 		-numa node,nodeid=${NUMA},memdev=${NUMAMEM} \
 		-k ${LANGUAGE:-en-us} ${OPTS}"
 name="${command##*/} for ${ID} (${NAME})"
-start_stop_daemon_args="--verbose"
+start_stop_daemon_args="-q"
 description="Start the system"
 extra_commands="reboot"
 description_reboot="Reboot the system"
@@ -44,6 +44,8 @@ description_suspend="Suspend running system"
 description_status="Show system status"
 
 start_pre() {
+	if [ "$SVCNAME" = 'qemu' ] || [ "$SVCNAME" = 'kvm' ] ; then eerror "Create a symlink for the VM you want to run"; return 1; fi
+
 	if yesno ${KVM}; then command_args="${command_args} -enable-kvm"; fi
 	if yesno ${DAEMON}; then command_args="${command_args} -daemonize"; fi
 	if yesno ${NODEFAULTS}; then command_args="${command_args} -nodefaults"; fi
@@ -60,7 +62,7 @@ start_pre() {
 }
 
 depend() {
-	if [ "$SVCNAME" = 'qemu' ] || [ "$SVCNAME" = 'kvm' ] ; then eerror "Create a symlink for the VM you want to run"; return 0; fi
+	need net
 }
 
 console() {
