@@ -109,7 +109,7 @@ suspend() {
 
 stop() {
 	ebegin "Stopping ${command##*/} for ${ID} (${NAME})"
-	echo '{ "execute": "qmp_capabilities" }{"execute":"system_powerdown"}' | socat - unix-connect:/run/qemu/${ID}.qmp 1>/dev/null
+	echo '{ "execute": "qmp_capabilities" }{"execute":"system_powerdown"}' | socat - unix-connect:/run/qemu/${ID}.qmp >/dev/null 2>&1
 	printf "   Waiting $TIMEOUT seconds for shutdown "
 	while kill -0 $(cat ${pidfile}) 2>/dev/null && [ -e ${pidfile} ] && [ ${TIMEOUT} -gt 0 ] ; do sleep 1; printf '.'; TIMEOUT=$(( TIMEOUT - 1 )); done
 	printf '\n'
