@@ -29,7 +29,8 @@ command_args="-mon chardev=qmp,mode=control \
 		-cpu ${CPU:-host} \
 		-m ${RAM:-512M} \
 		-numa node,nodeid=${NUMA},memdev=${NUMAMEM} \
-		-k ${LANGUAGE:-en-us} ${OPTS}"
+		-k ${LANGUAGE:-en-us}
+		-smbios ${SMBIOS} ${OPTS}"
 name="${command##*/} for ${ID} (${NAME})"
 start_stop_daemon_args="-q"
 description="Start the system"

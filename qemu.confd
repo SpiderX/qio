@@ -26,6 +26,8 @@ NUMA=0
 NUMAMEM="ram-node0"
 # Select CPU model (qemu-system-$ARCH -cpu help)
 CPU=""
+# Define SMBIOS entry
+SMBIOS="type=1"
 
 ## VM Resource
 # Allocate guest startup RAM size (qemu-system-$ARCH -m help)
